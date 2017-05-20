@@ -41,7 +41,7 @@ import java.util.Set;
  * hierarchically. Once the construction is finished, the actual 
  * {@link Category} hierarchy may be built by the root of the builder
  * hierarchy:
- * <code><pre>
+ * <pre><code>
  * CategoriesBuilder&lt;Type&gt; b = Categories.createBuilder("Root");
  * b.add(elementForRoot);
  * b.get("FirstChild").add(someElementForFirstChild);
@@ -49,7 +49,7 @@ import java.util.Set;
  * b.get("SecondChild").add(ElementForSecondChild);
  * b.get("SecondChild").get("GrandChild").add(lastElement);
  * Category&lt;Type&gt; root = b.build();
- * </pre></code>
+ * </code></pre>
  * 
  * @param <T> The type of elements for the {@link Category}
  */
