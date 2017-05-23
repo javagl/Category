@@ -85,6 +85,7 @@ public class Categories
      * given result set, recursively
      * 
      * @param <T> The type of the elements in the {@link Category}
+     * 
      * @param category The category to collect all elements from
      * @param result The resulting set storing the elements
      */
@@ -96,6 +97,35 @@ public class Categories
             getAllElements(child, result);
         }
     }
+    
+    /**
+     * Merges the given source {@link Category} into the given target 
+     * {@link Category}. This merge will be performed recursively 
+     * for all sub-categories. 
+     * 
+     * @param <T> The type of the elements in the {@link Category}
+     * 
+     * @param target The {@link MutableCategory} to which the other will
+     * be added 
+     * @param source The source {@link Category}
+     */
+    public static <T> void mergeRecursively(
+        MutableCategory<T> target, 
+        Category<? extends T> source)
+    {
+        target.addElements(source.getElements());
+        for (Category<? extends T> sourceChild : source.getChildren())
+        {
+            String name = sourceChild.getName();
+            MutableCategory<T> targetChild = target.getChild(name);
+            if (targetChild == null)
+            {
+                targetChild = target.addChild(name);
+            }
+            mergeRecursively(targetChild, sourceChild);
+        }
+    }
+    
     
     /**
      * Clean up the given {@link Category}. That is, this method will 

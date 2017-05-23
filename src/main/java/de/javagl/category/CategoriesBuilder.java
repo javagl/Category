@@ -27,20 +27,13 @@
 
 package de.javagl.category;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * A builder for {@link Category} hierarchies. This class allows an easy 
- * construction of category hierarchies: The builders are organized 
- * hierarchically. Once the construction is finished, the actual 
- * {@link Category} hierarchy may be built by the root of the builder
- * hierarchy:
+ * A builder for {@link Category} hierarchies: 
  * <pre><code>
  * CategoriesBuilder&lt;Type&gt; b = Categories.createBuilder("Root");
  * b.add(elementForRoot);
@@ -48,41 +41,41 @@ import java.util.Set;
  * b.get("FirstChild").add(someOtherElementForFirstChild);
  * b.get("SecondChild").add(ElementForSecondChild);
  * b.get("SecondChild").get("GrandChild").add(lastElement);
- * Category&lt;Type&gt; root = b.build();
+ * Category&lt;Type&gt; root = b.get();
  * </code></pre>
+ * This class essentially wraps a {@link MutableCategory} and offers 
+ * convenience functions for the initial construction of the categories,
+ * for example, by creating the child categories on demand.
  * 
  * @param <T> The type of elements for the {@link Category}
  */
 public final class CategoriesBuilder<T>
 {
     /**
-     * The name of the root category being built
+     * The category that is currently built
      */
-    private final String name;
+    private MutableCategory<T> category;
 
-    /**
-     * The map from names to the builder instances for the
-     * sub-categories
-     */
-    private final Map<String, CategoriesBuilder<T>> subCategories;
-    
-    /**
-     * The elements that are added to this category
-     */
-    private final Set<T> elements;
-    
     /**
      * Creates a new instance of this builder, using the given name
      * for the root category.
      * 
-     * @param parent The parent category
      * @param name The name of the root category
      */
     CategoriesBuilder(String name)
     {
-        this.name = Objects.requireNonNull(name, "The name may not be null");
-        this.subCategories = new LinkedHashMap<String, CategoriesBuilder<T>>();
-        this.elements = new LinkedHashSet<T>();
+        this.category = new DefaultCategory<T>(name);
+    }
+
+    /**
+     * Creates a new instance of this builder, for the given {@link Category}
+     * 
+     * @param category The {@link Category}
+     */
+    private CategoriesBuilder(MutableCategory<T> category)
+    {
+        this.category = Objects.requireNonNull(
+            category, "The category may not be null");
     }
     
     /**
@@ -93,7 +86,7 @@ public final class CategoriesBuilder<T>
      */
     public CategoriesBuilder<T> add(T element)
     {
-        elements.add(element);
+        category.addElements(Arrays.asList(element));
         return this;
     }
     
@@ -107,14 +100,11 @@ public final class CategoriesBuilder<T>
     {
         if (elements != null)
         {
-            for (T element : elements)
-            {
-                this.elements.add(element);
-            }
+            category.addElements(elements);
         }
         return this;
     }
-    
+
     /**
      * Returns a builder for the sub-category with the given name.
      * If the respective sub-category does not exist, it will be
@@ -126,13 +116,13 @@ public final class CategoriesBuilder<T>
     public CategoriesBuilder<T> get(String name)
     {
         Objects.requireNonNull(name, "The name may not be null");
-        CategoriesBuilder<T> result = subCategories.get(name);
-        if (result == null)
+        MutableCategory<T> childCategory = category.getChild(name);
+        if (childCategory == null)
         {
-            result = new CategoriesBuilder<T>(name);
-            subCategories.put(name, result);
+            childCategory = category.addChild(name);
         }
-        return result;
+        CategoriesBuilder<T> child = new CategoriesBuilder<T>(childCategory);
+        return child;
     }
     
     /**
@@ -145,24 +135,7 @@ public final class CategoriesBuilder<T>
      */
     private Set<T> getAllElements()
     {
-        Set<T> allElements = new LinkedHashSet<T>();
-        getAllElements(allElements);
-        return Collections.unmodifiableSet(allElements);
-    }
-    
-    /**
-     * Recursively adds all elements of this builder
-     * and its descendants to the given collection.
-     * 
-     * @param allElements The collection to add the elements to
-     */
-    private void getAllElements(Collection<? super T> allElements)
-    {
-        allElements.addAll(elements);
-        for (CategoriesBuilder<T> subBuilder : subCategories.values())
-        {
-            subBuilder.getAllElements(allElements);
-        }
+        return Categories.getAllElements(category);
     }
     
     /**
@@ -175,11 +148,7 @@ public final class CategoriesBuilder<T>
      */
     public CategoriesBuilder<T> mergeRecursively(Category<? extends T> other)
     {
-        get(other.getName()).addAll(other.getElements());
-        for (Category<? extends T> otherChild : other.getChildren())
-        {
-            get(other.getName()).mergeRecursively(otherChild);
-        }
+        Categories.mergeRecursively(category, other);
         return this;
     }
     
@@ -212,25 +181,15 @@ public final class CategoriesBuilder<T>
     }
     
     /**
-     * Build the {@link Category} according to the current state of 
-     * this builder. 
+     * Returns the {@link MutableCategory} that is currently being built 
      * 
-     * @return The {@link Category}
+     * @return The {@link MutableCategory}
      */
-    public MutableCategory<T> build()
+    public MutableCategory<T> get()
     {
-        DefaultCategory<T> result = new DefaultCategory<T>(name);
-        result.addElements(elements);
-        if (subCategories != null)
-        {
-            for (CategoriesBuilder<T> subBuilder : subCategories.values())
-            {
-                MutableCategory<T> child = subBuilder.build();
-                result.addChild(child);
-            }
-        }
-        return result;
+        return category;
     }
+    
     
      
 }
